@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لعبة حل المشكلات المحسنة</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background-color: #f9f9f9; direction: rtl; padding: 20px; }
+    .scenario-container { margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; width: 80%; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    button { padding: 10px 20px; background-color: #1976d2; color: white; border: none; margin: 10px; cursor: pointer; border-radius: 5px; }
+    button:hover { background-color: #1565c0; }
+    button:active {
+      transform: scale(0.95); /* تقليل الحجم عند الضغط */
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    #timer { font-size: 20px; font-weight: bold; }
+    #socialButtons { margin-top: 20px; }
+    canvas { margin-top: 20px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>لعبة سيناريوهات حل المشكلات المحسنة</h1>
+  <div class="scenario-container" id="scenarioContainer">
+    <!-- سيتم إضافة السيناريوهات ديناميكيًا -->
+  </div>
+  <p id="timer">الوقت المتبقي: 30 ثانية</p>
+
+  <div id="socialButtons">
+    <a href="https://twitter.com/intent/tweet?text=لقد أكملت لعبة حل المشكلات!">
+      <button>مشاركة على تويتر</button>
+    </a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=http://example.com">
+      <button>مشاركة على فيسبوك</button>
+    </a>
+  </div>
+
+  <canvas id="myChart" width="400" height="200"></canvas>
+
+  <script>
+    // تعريف السيناريوهات
+    const scenarios = [
+      {
+        text: "أنت مدير فريق عمل، وهناك نزاع بين اثنين من الموظفين. كيف تتعامل مع الوضع؟",
+        options: [
+          { text: "تتجاهل النزاع وتأمل أن يتم حله ذاتيًا.", outcome: "خطأ! تجاهل المشكلة قد يؤدي إلى تفاقم النزاع.", score: 0 },
+          { text: "تعقد اجتماعًا مع الموظفين لفهم وجهات النظر وحل المشكلة.", outcome: "صحيح! هذا يعزز التواصل ويحل النزاع.", score: 1 },
+          { text: "تعاقب الموظفين فورًا دون مناقشة.", outcome: "خطأ! اتخاذ قرارات بدون فهم المشكلة قد يؤدي إلى الإحباط.", score: 0 }
+        ]
+      },
+      {
+        text: "لاحظت انخفاضًا كبيرًا في إنتاجية فريقك. ماذا تفعل؟",
+        options: [
+          { text: "تزيد ساعات العمل لإجبار الفريق على العمل بجهد أكبر.", outcome: "خطأ! هذا قد يؤدي إلى الإرهاق.", score: 0 },
+          { text: "تراجع أسباب الانخفاض وتوفر الدعم اللازم لتحسين الأداء.", outcome: "صحيح! هذا هو الأسلوب الأمثل لتحسين الإنتاجية.", score: 1 },
+          { text: "تتجاهل الموضوع وتنتظر أن تتحسن الأمور تلقائيًا.", outcome: "خطأ! التجاهل لن يحل المشكلة.", score: 0 }
+        ]
+      },
+      {
+        text: "أحد العملاء غير راضٍ عن الخدمة ويهدد بالتوقف عن التعامل مع شركتك. كيف تتعامل؟",
+        options: [
+          { text: "تستمع إلى شكواه وتحاول إيجاد حل مرضٍ له.", outcome: "صحيح! هذا يعزز ولاء العملاء.", score: 1 },
+          { text: "تخبره بأن شركتك ليست مسؤولة عن مشكلته.", outcome: "خطأ! هذا قد يؤدي إلى خسارة العميل.", score: 0 },
+          { text: "تعتذر فقط دون تقديم أي حلول.", outcome: "خطأ! الاعتذار وحده ليس كافيًا.", score: 0 }
+        ]
+      },
+      {
+        text: "أنت عضو في فريق عمل مشترك مع فريق آخر. كيف تحل النزاع حول توزيع المهام؟",
+        options: [
+          { text: "تتجاهل النزاع وتأمل أن يتم حله ذاتيًا.", outcome: "خطأ! هذا يمكن أن يؤدي إلى تأخير المشروع.", score: 0 },
+          { text: "تتحدث مع الفريق الآخر بشكل مباشر وتبحث عن حل مناسب.", outcome: "صحيح! الحوار المباشر يحل النزاع.", score: 1 },
+          { text: "تطلب من المدير التدخل فورًا لحل المشكلة.", outcome: "خطأ! تدخل المدير قد يكون الحل الأخير.", score: 0 }
+        ]
+      }
+    ];
+
+    let currentScenarioIndex = 0;
+    let totalScore = 0;
+    let timeLeft = 30; // 30 ثانية لكل سيناريو
+    let timer;
+
+    function startTimer() {
+        timer = setInterval(function() {
+            timeLeft--;
+            document.getElementById("timer").innerHTML = `الوقت المتبقي: ${timeLeft} ثانية`;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                alert("الوقت انتهى!");
+                nextScenario();
+            }
+        }, 1000);
+    }
+
+    function loadScenario() {
+        if (currentScenarioIndex >= scenarios.length) {
+            showSummary();
+            return;
+        }
+
+        const scenario = scenarios[currentScenarioIndex];
+        const container = document.getElementById("scenarioContainer");
+
+        container.innerHTML = `<p>${scenario.text}</p>`;
+        scenario.options.forEach((option, index) => {
+            container.innerHTML += `<button onclick="handleOption(${index})">${option.text}</button>`;
+        });
+
+        startTimer(); // بدء المؤقت عند تحميل السيناريو
+    }
+
+    function handleOption(optionIndex) {
+        const scenario = scenarios[currentScenarioIndex];
+        const selectedOption = scenario.options[optionIndex];
+
+        alert(selectedOption.outcome);
+        totalScore += selectedOption.score;
+        currentScenarioIndex++;
+
+        nextScenario();
+    }
+
+    function nextScenario() {
+        timeLeft = 30; // إعادة تعيين الوقت
+        loadScenario();
+    }
+
+    function showSummary() {
+        const container = document.getElementById("scenarioContainer");
+        container.innerHTML = `
+          <h2>ملخص الأداء</h2>
+          <p>إجمالي النقاط: ${totalScore}/${scenarios.length}</p>
+          <button onclick="restart()">إعادة المحاولة</button>
+        `;
+
+        // إضافة الرسم البياني
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['سيناريو 1', 'سيناريو 2', 'سيناريو 3', 'سيناريو 4'],
+                datasets: [{
+                    label: 'نقاطك',
+                    data: [1, 0, 1, 1], // نقاط لكل سيناريو
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+    }
+
+    function restart() {
+        currentScenarioIndex = 0;
+        totalScore = 0;
+        loadScenario();
+    }
+
+    // تحميل أول سيناريو
+    loadScenario();
+  </script>
+</body>
+</html>
